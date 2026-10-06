@@ -1,0 +1,10 @@
+torch
+transformers
+accelerate
+peft
+bitsandbytes
+datasets
+fastapi
+uvicorn
+chromadb
+pillow
