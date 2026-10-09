@@ -8,6 +8,7 @@ import json
 import torch
 import uvicorn
 import asyncio
+import time
 from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse, JSONResponse, StreamingResponse
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TextIteratorStreamer
@@ -119,6 +120,7 @@ class BotEngine:
 
     async def generate_stream(self, message, history):
         """流式生成，逐 token 产出"""
+        global _last_activity
         messages = self.build_messages(message, history)
         text = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         inputs = self.tokenizer(text, return_tensors="pt").to(self.model.device)
@@ -142,6 +144,7 @@ class BotEngine:
         full_reply = ""
         for new_text in streamer:
             full_reply += new_text
+            _last_activity = time.time()  # 逐 token 刷新活动时间，保持小宠"思考中"状态
             # SSE 格式：data: json\n\n
             yield f"data: {json.dumps({'token': new_text, 'full': full_reply})}\n\n"
 
@@ -196,7 +199,6 @@ def api_clear():
 
 
 # ===== 活动追踪（供桌面小宠使用） =====
-import time
 _last_activity = time.time()
 
 @app.post("/api/chat")
